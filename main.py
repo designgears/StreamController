@@ -180,7 +180,7 @@ def create_global_objects():
 
 @log.catch
 def update_assets():
-    settings = gl.settings_manager.load_settings_from_file(os.path.join(gl.DATA_PATH, "settings", "settings.json"))
+    settings = gl.settings_manager.get_app_settings()
     auto_update = settings.get("store", {}).get("auto-update", True)
 
     if gl.argparser.parse_args().devel:
