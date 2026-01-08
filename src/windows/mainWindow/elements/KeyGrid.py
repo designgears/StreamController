@@ -74,7 +74,9 @@ class KeyGrid(Gtk.Grid):
         for x in range(layout[1]):
             for y in range(layout[0]):
                 button = KeyButton(self, (x, y))
-                self.attach(button, x, y, 1, 1)
+                center_box = Gtk.Box(halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER, hexpand=True, vexpand=True)
+                center_box.append(button)
+                self.attach(center_box, x, y, 1, 1)
                 button._set_visible(False) # Hide buttons per default - they will be shown when the the grid is mapped to prevent large grids to resize every child
                 self.buttons[x][y] = button
         return
@@ -140,10 +142,29 @@ class KeyButton(Gtk.Frame):
         # self.button = Gtk.Button(hexpand=True, vexpand=True, css_classes=["key-button"])
         # self.set_child(self.button)
 
-        self.image = Gtk.Image(hexpand=True, vexpand=True, css_classes=["key-image", "key-button"])
-        self.image.set_overflow(Gtk.Overflow.HIDDEN)
-        self.image.set_size_request(75, 75)
-        self.image.set_pixel_size(75)
+        settings = gl.settings_manager.get_app_settings()
+        use_real_size = settings.get("ui", {}).get("real-button-size", False)
+        
+        if use_real_size:
+            key_size = self.key_grid.deck_controller.get_key_image_size()
+            if key_size and key_size[0] > 0 and key_size[1] > 0:
+                key_width, key_height = key_size
+                pixel_size = max(key_width, key_height)
+                self.image = Gtk.Image(hexpand=False, vexpand=False, css_classes=["key-image", "key-button"])
+                self.image.set_overflow(Gtk.Overflow.HIDDEN)
+                self.image.set_size_request(key_width, key_height)
+                self.image.set_pixel_size(pixel_size)
+            else:
+                self.image = Gtk.Image(hexpand=True, vexpand=True, css_classes=["key-image", "key-button"])
+                self.image.set_overflow(Gtk.Overflow.HIDDEN)
+                self.image.set_size_request(75, 75)
+                self.image.set_pixel_size(75)
+        else:
+            self.image = Gtk.Image(hexpand=True, vexpand=True, css_classes=["key-image", "key-button"])
+            self.image.set_overflow(Gtk.Overflow.HIDDEN)
+            self.image.set_size_request(75, 75)
+            self.image.set_pixel_size(75)
+        
         self.set_child(self.image)
 
         # self.button.connect("clicked", self.on_click)
@@ -340,7 +361,7 @@ class KeyButton(Gtk.Frame):
 
     def simulate_press(self):
         ## Check if double click to emulate is turned on in the settings
-        settings = gl.settings_manager.load_settings_from_file(os.path.join(gl.DATA_PATH, "settings", "settings.json"))
+        settings = gl.settings_manager.get_app_settings()
         if not settings.get("key-grid", {}).get("emulate-at-double-click", True):
             return
         

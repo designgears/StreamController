@@ -21,6 +21,7 @@ from GtkHelper.GtkHelper import BetterPreferencesGroup
 from autostart import is_flatpak, setup_autostart
 from src.backend.DeckManagement.HelperMethods import color_values_to_gdk, gdk_color_to_values, get_pango_font_description, get_values_from_pango_font_description
 from src.windows.Settings.PluginSettingsPage import PluginSettingsPage
+from src.windows.mainWindow.elements.KeyGrid import KeyGrid
 
 # Import globals first to get IS_MAC
 import globals as gl
@@ -64,7 +65,7 @@ class Settings(Adw.PreferencesWindow):
 
     def load_json(self):
         # Load settings from file
-        settings = gl.settings_manager.load_settings_from_file(os.path.join(gl.DATA_PATH, "settings", "settings.json"))
+        settings = gl.settings_manager.get_app_settings()
         self.settings_json = settings
     
     def save_json(self):
@@ -103,6 +104,9 @@ class UIPageGroup(Adw.PreferencesGroup):
         self.auto_config_row = Adw.SwitchRow(title=gl.lm.get("settings-auto-open-action-config"), subtitle=gl.lm.get("settings-auto-open-action-config-subtitle"), active=True)
         self.add(self.auto_config_row)
 
+        self.real_button_size_row = Adw.SwitchRow(title="Use Real Button Size", subtitle="Display buttons and touchscreen at their actual hardware dimensions (requires restart)", active=False)
+        self.add(self.real_button_size_row)
+
         self.load_defaults()
 
         # Connect signals
@@ -112,6 +116,7 @@ class UIPageGroup(Adw.PreferencesGroup):
         self.allow_white_mode.connect("notify::active", self.on_allow_white_mode_toggled)
         self.show_notifications.connect("notify::active", self.on_show_notifications_toggled)
         self.auto_config_row.connect("notify::active", self.on_auto_config_row_toggled)
+        self.real_button_size_row.connect("notify::active", self.on_real_button_size_row_toggled)
 
     def load_defaults(self):
         self.trayicon_row.set_active(self.settings.settings_json.get("ui",{}).get("tray-icon", True))
@@ -120,6 +125,7 @@ class UIPageGroup(Adw.PreferencesGroup):
         self.allow_white_mode.set_active(self.settings.settings_json.get("ui", {}).get("allow-white-mode", False))
         self.show_notifications.set_active(self.settings.settings_json.get("ui", {}).get("show-notifications", True))
         self.auto_config_row.set_active(self.settings.settings_json.get("ui", {}).get("auto-open-action-config", True))
+        self.real_button_size_row.set_active(self.settings.settings_json.get("ui", {}).get("real-button-size", False))
 
 
     def on_trayicon_row_toggled(self, *args):
@@ -172,6 +178,13 @@ class UIPageGroup(Adw.PreferencesGroup):
     def on_auto_config_row_toggled(self, *args):
         self.settings.settings_json.setdefault("ui", {})
         self.settings.settings_json["ui"]["auto-open-action-config"] = self.auto_config_row.get_active()
+
+        # Save
+        self.settings.save_json()
+
+    def on_real_button_size_row_toggled(self, *args):
+        self.settings.settings_json.setdefault("ui", {})
+        self.settings.settings_json["ui"]["real-button-size"] = self.real_button_size_row.get_active()
 
         # Save
         self.settings.save_json()
