@@ -335,6 +335,7 @@ class DeckController:
         self.key_spacing = (36, 36)
 
         if isinstance(self.deck, StreamDeckPlus) or (isinstance(self.deck, FakeDeck) and self.deck.key_layout() == [2, 4]):
+            log.error("Deck recognized as StreamDeckPlus")
             self.key_spacing = (52, 36)
 
         # Tasks
@@ -431,6 +432,7 @@ class DeckController:
         for t in self.inputs:
             for i in self.inputs[t]:
                 i.update()
+        GLib.idle_add(lambda: (lambda g: g.load_from_changes() if g else None)(self.get_own_key_grid()))
         log.debug(f"Updating all inputs took {time.time() - start} seconds")
 
     def event_callback(self, ident: InputIdentifier, *args, **kwargs):
@@ -2308,17 +2310,7 @@ class ControllerKey(ControllerInput):
     def set_ui_key_image(self, image: Image.Image) -> None:
         if image is None:
             return
-        
-        x, y = ControllerKey.Index_To_Coords(self.deck_controller.deck, self.index)
-
-        if self.deck_controller.get_own_key_grid() is None or not gl.app.main_win.get_mapped():
-            # Save to use later
-            self.deck_controller.ui_image_changes_while_hidden[self.identifier] = image # The ui key coords are in reverse order
-        else:
-            try:
-                self.deck_controller.get_own_key_grid().buttons[x][y].set_image(image)
-            except:
-                print(f"Failed to set ui key image for {self.identifier}")
+        self.deck_controller.ui_image_changes_while_hidden[self.identifier] = image
         
     def get_own_ui_key(self) -> KeyButton:
         x, y = ControllerKey.Index_To_Coords(self.deck_controller.deck, self.index)
@@ -2590,7 +2582,8 @@ class ControllerDial(ControllerInput):
             self.update()
 
     def update(self):
-        self.get_touch_screen().update()
+        if self.deck_controller.deck.is_touch():
+            self.get_touch_screen().update()
 
     def get_active_state(self) -> "ControllerDialState":
         return super().get_active_state()
@@ -2605,7 +2598,9 @@ class ControllerDial(ControllerInput):
         self.update()
 
     def get_image_size(self) -> tuple[int, int]:
-        return self.get_touch_screen().get_dial_image_area_size()
+        if self.deck_controller.deck.is_touch():
+            return self.get_touch_screen().get_dial_image_area_size()
+        return (0, 0)
     
 
 class ControllerTouchScreenState(ControllerInputState):
