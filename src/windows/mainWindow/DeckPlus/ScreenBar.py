@@ -244,9 +244,11 @@ class ScreenBarImage(Gtk.Picture):
 
     def __init__(self, screenbar: ScreenBar, **kwargs):
         settings = gl.settings_manager.get_app_settings()
-        use_real_size = settings.get("ui", {}).get("real-button-size", False)
+        self.use_real_size = settings.get("ui", {}).get("real-button-size", False)
+        self.preview_width = 80
+        self.preview_height = 10
         
-        if use_real_size:
+        if self.use_real_size:
             touchscreen_size = screenbar.deck_controller.get_touchscreen_image_size()
             if touchscreen_size:
                 screen_width, screen_height = touchscreen_size
@@ -255,11 +257,15 @@ class ScreenBarImage(Gtk.Picture):
                 ui_height = int(screen_height * scale_factor)
             else:
                 ui_width, ui_height = 600, 75
+            self.preview_width = ui_width
+            self.preview_height = ui_height
             super().__init__(keep_aspect_ratio=True, can_shrink=False, content_fit=Gtk.ContentFit.FILL,
                              halign=Gtk.Align.CENTER, hexpand=True, width_request=ui_width, height_request=ui_height,
                              valign=Gtk.Align.CENTER, vexpand=False, css_classes=["plus-screenbar-image"],
                              **kwargs)
         else:
+            self.preview_width = 80
+            self.preview_height = 10
             super().__init__(keep_aspect_ratio=True, can_shrink=True, content_fit=Gtk.ContentFit.SCALE_DOWN,
                              halign=Gtk.Align.CENTER, hexpand=False, width_request=80, height_request=10,
                              valign=Gtk.Align.CENTER, vexpand=False, css_classes=["plus-screenbar-image"],
@@ -327,10 +333,12 @@ class ScreenBarImage(Gtk.Picture):
 
     def _get_preview_size(self) -> tuple[int, int]:
         if self.full_image is None:
-            return self.PREVIEW_MAX_WIDTH, self.PREVIEW_MAX_HEIGHT
+            return self.preview_width, self.preview_height
 
         width, height = self.full_image.size
-        scale = min(self.PREVIEW_MAX_WIDTH / width, self.PREVIEW_MAX_HEIGHT / height)
+        max_width = self.preview_width if self.use_real_size else self.PREVIEW_MAX_WIDTH
+        max_height = self.preview_height if self.use_real_size else self.PREVIEW_MAX_HEIGHT
+        scale = min(max_width / width, max_height / height)
         preview_width = max(1, int(width * scale))
         preview_height = max(1, int(height * scale))
         return preview_width, preview_height
